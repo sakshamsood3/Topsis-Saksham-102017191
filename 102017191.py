@@ -7,27 +7,29 @@ Original file is located at
     https://colab.research.google.com/drive/1d0gMhSLGAVFA0PikOSYojcPgOaQ5ucx9
 """
 
-#Saksham Sood
-#102017191
-#TOPSIS ASSIGNMENT
+# Saksham Sood
+# 102017191
+# TOPSIS ASSIGNMENT
 
-#Importing the libraries
+# Importing the libraries
 import pandas as pd
 import numpy as np
 import math
 from tabulate import tabulate
 from os import path
 import sys
+import copy
+
 
 def topsis(filename, weights, impacts, resultfilename):
     # Loading the dataset
     dataset = pd.read_csv(filename)
 
-    #dropping any rows containing null values
-    dataset.dropna(inplace = True)
+    # dropping any rows containing null values
+    dataset.dropna(inplace=True)
 
-    #dropping first column as it does not contain numerical values
-    df = dataset.iloc[0:,1:].values
+    # dropping first column as it does not contain numerical values
+    df = dataset.iloc[0:, 1:].values
 
     # create a pandas dataframe
     mat = pd.DataFrame(df)
@@ -35,7 +37,7 @@ def topsis(filename, weights, impacts, resultfilename):
     # calculating sum of squares
     sumval = []
     for col in range(0, len(mat.columns)):
-        tmprow= mat.iloc[0:,[col]].values
+        tmprow = mat.iloc[0:, [col]].values
         sum = 0
         for value in tmprow:
             sum = sum + value**2
@@ -45,30 +47,30 @@ def topsis(filename, weights, impacts, resultfilename):
     i = 0
     while(i < len(mat.columns)):
         for j in range(0, len(mat)):
-            mat[i][j] = mat[i][j]/sumval[i] 
-        i+=1
+            mat[i][j] = mat[i][j]/sumval[i]
+        i += 1
 
     # multiply each entry by respective weights
     i = 0
     while(i < len(mat.columns)):
         for j in range(0, len(mat)):
-            mat[i][j] = mat[i][j]*weights[i] 
-        i+=1
+            mat[i][j] = mat[i][j]*weights[i]
+        i += 1
 
     # Calculating ideal best and the worst values
     bestval = []
     worstval = []
 
     for col in range(0, len(mat.columns)):
-        tmpcol= mat.iloc[0:,[col]].values
-        
-        if impacts[col] == "+" :
+        tmpcol = mat.iloc[0:, [col]].values
+
+        if impacts[col] == "+":
             maxval = max(tmpcol)
             minval = min(tmpcol)
             bestval.append(maxval[0])
             worstval.append(minval[0])
 
-        if impacts[col] == "-" :
+        if impacts[col] == "-":
             maxval = max(tmpcol)
             minval = min(tmpcol)
             bestval.append(minval[0])
@@ -88,45 +90,34 @@ def topsis(filename, weights, impacts, resultfilename):
         Sipos.append(math.sqrt(temp1))
         Sineg.append(math.sqrt(temp2))
 
-    # Calculating performance score 
-    PScore= []
+    # Calculating performance score
+    PScore = []
 
     for row in range(0, len(mat)):
         PScore.append(Sineg[row]/(Sipos[row] + Sineg[row]))
 
     # calculating rank
     Rank = []
-    sortedPScore= sorted(PScore, reverse = True)
+    sortedPScore = sorted(PScore, reverse=True)
 
     for row in range(0, len(mat)):
         for i in range(0, len(sortedPScore)):
             if PScore[row] == sortedPScore[i]:
                 Rank.append(i+1)
 
-    # inserting newly calculated Columns topsis score and rank to the matrix
-    col1 = dataset.iloc[:,[0]].values
-    mat.insert(0, dataset.columns[0], col1)
-    mat['Topsis Score'] = PScore
-    mat['Rank'] = Rank
-
-    # Renamig the columns
-    newColNames = []
-    for name in dataset.columns:
-        newColNames.append(name)
-    newColNames.append('Topsis Score')
-    newColNames.append('Rank')
-    mat.columns = newColNames
-
+    # inserting newly calculated Columns topsis score and rank to the dataframe
+    op = pd.DataFrame(list(zip(PScore, Rank)),
+                      columns=['Topsis Score', 'Rank'])
+    hc = pd.concat([dataset, op], axis=1)
     # saving matrix to resultant csv file
-    mat.to_csv(resultfilename)
+    hc.to_csv(resultfilename)
 
     # printing to console
-    print(tabulate(mat, headers = mat.columns))
+    print(tabulate(hc, headers=hc.columns))
 
-    
 
-def checkReq() :
-    if len(sys.argv) == 5 :
+def checkReq():
+    if len(sys.argv) == 5:
         # get the filename from the passed arguments -> first argument provided on cmd
         fname = sys.argv[1].lower()
         # get the weights from passed arguments -> second argument provided on cmd
@@ -135,45 +126,46 @@ def checkReq() :
             wts[i] = float(wts[i])
         # get the impact values from passed arguments -> third argument provided on cmd
         impacts = sys.argv[3].split(",")
-        #check only +ve and -ve in impacts
-        for i in range(0,len(impacts)):
-          if(impacts[i]!="+" and impacts[i]!="-"):
-            print('impacts contain something other than + or -')
-            return
-        #check for columns
-        d=pd.read_csv(str(fname))
+        # check only +ve and -ve in impacts
+        for i in range(0, len(impacts)):
+            if(impacts[i] != "+" and impacts[i] != "-"):
+                print('impacts contain something other than + or -')
+                return
+        # check for columns
+        d = pd.read_csv(str(fname))
         cols = len(d.axes[1])
-        if(cols<=3):
-          print('Not enough columns ')
-          return
-        #check equal number of columns,weights and impacts
-        if(len(wts)!=len(impacts) or len(impacts)!=cols-1 or len(wts)!=cols-1):
-          print('Not equal number of weights impacts and columns')
-          return
-        #check if columns have numeric data type only
-        if(not(np.issubdtype(d.iloc[:,1].values.dtype, np.number))):
-                print('Please ensure all columns have numeric data type')
+        if(cols <= 3):
+            print('Not enough columns ')
+            return
+        # check equal number of columns,weights and impacts
+        if(len(wts) != len(impacts) or len(impacts) != cols-1 or len(wts) != cols-1):
+            print('Not equal number of weights impacts and columns')
+            return
+        # check if columns have numeric data type only
+        if(not(np.issubdtype(d.iloc[:, 1].values.dtype, np.number))):
+            print('Please ensure all columns have numeric data type')
         # get the filename in which we want to store result
         rfname = sys.argv[-1].lower()
         if ".csv" not in rfname:
             print("resultant filename should contain .csv file format")
             return
-        if path.exists(fname) :
-            if len(wts) == len(impacts) :
+        if path.exists(fname):
+            if len(wts) == len(impacts):
                 topsis(fname, wts, impacts, rfname)
-            else :
-                print("input error number of weights should be equal to number of impacts")
+            else:
+                print(
+                    "input error number of weights should be equal to number of impacts")
                 return
-        else :
+        else:
             print("data input file doesn't exist,check input")
             return
-    else :
+    else:
         print("required number of inputs are not provided")
         print("Sample input should have the following arguments: python <script_name> <input_data_file_name> <weights> <impacts> <result_file_name>")
         return
+
 
 # Main Function
 # if no error occurs, it will call the topsis() function,
 # otherwise will display appropriate error
 checkReq()
-
