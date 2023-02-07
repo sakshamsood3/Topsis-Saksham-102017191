@@ -8,7 +8,7 @@ you just need to provide your input attributes using the command line and it wil
 
 ## Installation
 
-$ pip install TOPSIS-101816021==0.0.1
+$ pip install TOPSIS-102017191==0.0.2
 
 In the commandline, you can run it in the following ways -
     $ python <package_name> <path to input_data_file_name> <weights as strings> <impacts as strings> <result_file_name>
